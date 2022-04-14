@@ -1,0 +1,80 @@
+%Brendon Sehlako
+%Project:Control Quanser
+%% Symbolic Variables
+% Generalized Co-ordinates
+syms th dth ddth alph dalph ddalph
+q = [th; alph];
+dq = [dth; dalph];
+ddq = [ddth; ddalph];
+
+% Pendulum-Arm Parameters
+syms mr mp Lr Lp Jrr Jrl Jpl Jpr br bp % arm mass, pendulum mass, arm length, pendulum length, radial inertias, length inertias, damping 
+b = [br; bp];
+
+% Motor Parameters
+syms Jm Jh torque
+t = [torque; 0];
+
+% constants
+syms g
+
+% Rotations
+R01 = Rotz(th)%+Rotx(alpha)% [CODE HERE]; % from frame 0 to frame 1
+R10 = transpose(R01)% [CODE HERE]; % from 1 to 0
+R12 = Rotx(alph)% [CODE HERE];
+R21 = transpose(R12)% [CODE HERE];
+R02 = R12*R01% [CODE HERE]; 
+R20 = R10*R21% [CODE HERE]; 
+mk=transpose(R02)
+% Inertia Tensors % use the diag function
+Ip_B = diag([Jpl Jpl Jpr])% [CODE HERE]
+Ir_B = diag([Jrr Jrl Jrl])% [CODE HERE]
+
+%% Mass Posititions [x;y;z];
+rHub = [0;0;0]% [CODE HERE];
+rArm_1 = [0.5*Lr;0;0]% [CODE HERE]; % starting positions points in +ve x
+rArm_0 = R10*rArm_1% [CODE HERE];
+rPen_2 = [0;0;0.5*Lp]% [CODE HERE]; % starting position points upward
+rPen_0 = rArm_0*2+R20*rPen_2% [CODE HERE];
+
+%% Mass Velocities (use the simplify function on each anwer)
+drHub = simplify(jacobian(rHub,q)*dq)% [CODE HERE];
+drArm = simplify(jacobian(rArm_0,q)*dq)% [CODE HERE];
+drPen = simplify(jacobian(rPen_0,q)*dq)% [CODE HERE];
+
+%% Angular Velocity 
+w01_1 = [0;0;dth]% [CODE HERE];
+w01_2=R12*w01_1
+w12_2 = [dalph;0;0]% [CODE HERE];
+w02_2 = w12_2+R12*w01_1% [CODE HERE];
+
+r = [rHub, rArm_0, rPen_0];
+w = [w01_2, w12_2, w02_2];
+
+%% Kinetic Energy (use the simplify function on final anwer)
+THub = 0.5*transpose(w01_2)*(Jh+Jm)*w01_2% [CODE HERE];
+TArm = 0.5*mr*transpose(drArm)*drArm+  0.5*transpose(w02_2)*Ir_B*w02_2% [CODE HERE];
+TPen = 0.5*mp*transpose(drPen)*drPen+  0.5*transpose(w02_2)*Ip_B*w02_2% [CODE HERE];
+Ttot = simplify(THub+TArm+TPen)% [CODE HERE];
+
+%% Potential Energy (use the simplify function on final anwer)
+Vtot = simplify(mp*g*transpose(rPen_0)*[0;0;1])% [CODE HERE];
+
+%% Helper Functions 
+function A = Rotx(th)
+    A = [1 0        0;...
+         0 cos(th)  sin(th);...
+         0 -sin(th)  cos(th)];
+end
+ 
+function A = Roty(th)
+    A = [cos(th)  0   -sin(th);...
+         0        1   0;...
+         sin(th)  0   cos(th)];
+end 
+
+function A = Rotz(th)
+    A = [cos(th)   sin(th) 0;... 
+         -sin(th)  cos(th) 0;...
+         0        0        1];
+end
